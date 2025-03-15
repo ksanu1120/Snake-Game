@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Snake Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: black;
+            margin: 0;
+            color: #0f0;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+        .menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        canvas {
+            border: 2px solid #0f0;
+            background-color: black;
+            box-shadow: 0 0 10px #0f0;
+        }
+        #scoreBoard {
+            display: flex;
+            justify-content: space-between;
+            width: 400px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .btn {
+            padding: 15px 30px;
+            margin: 10px;
+            font-size: 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .btn:hover {
+            background-color: #45a049;
+            transform: scale(1.1);
+        }
+        .difficulty-btns {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .difficulty-btns button {
+            margin: 5px;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            color: #0f0;
+            font-size: 24px;
+            text-align: center;
+        }
+        .popup button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .popup button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu" id="menu">
+        <h1 class="title">Snake Game</h1>
+        <div class="difficulty-btns">
+            <button class="btn" onclick="startGame('easy')">Easy</button>
+            <button class="btn" onclick="startGame('medium')">Medium</button>
+            <button class="btn" onclick="startGame('hard')">Hard</button>
+        </div>
+        <button class="btn" onclick="toggleTheme()">Toggle Theme</button>
+    </div>
+    
+    <div id="scoreBoard">
+        <div>Score: <span id="score">0</span></div>
+        <div>High Score: <span id="highScore">0</span></div>
+    </div>
+    
+    <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+    <div class="popup" id="gameOverPopup">
+        <p>Game Over!</p>
+        <button onclick="restartGame()">Restart</button>
+        <button onclick="goToHome()">Back to Home</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const box = 25;
+        let snake, direction, food, score, highScore, speed, gameLoop, gameOverFlag;
+
+        document.getElementById("menu").style.display = 'flex';
+        document.getElementById("scoreBoard").style.display = 'none';
+        document.getElementById("gameCanvas").style.display = 'none';
+        document.getElementById("gameOverPopup").style.display = 'none';
+
+        function startGame(difficulty) {
+            document.getElementById("menu").style.display = 'none';
+            document.getElementById("scoreBoard").style.display = 'flex';
+            document.getElementById("gameCanvas").style.display = 'block';
+            document.getElementById("gameOverPopup").style.display = 'none';
+
+            snake = [{ x: 200, y: 200 }];
+            direction = "RIGHT";
+            food = {
+                x: Math.floor(Math.random() * 16) * box,
+                y: Math.floor(Math.random() * 16) * box,
+            };
+            score = 0;
+            highScore = localStorage.getItem("highScore") || 0;
+            document.getElementById("highScore").innerText = highScore;
+            gameOverFlag = false;
+
+            if (difficulty === "easy") speed = 150;
+            else if (difficulty === "medium") speed = 100;
+            else if (difficulty === "hard") speed = 60;
+
+            document.addEventListener("keydown", (event) => {
+                if (event.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+                else if (event.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+                else if (event.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+                else if (event.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+            });
+
+            gameLoop = setInterval(draw, speed);
+        }
+
+        function draw() {
+            if (gameOverFlag) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#0f0";
+            ctx.fillRect(food.x, food.y, box, box);
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = "#0f0";
+
+            snake.forEach((segment, index) => {
+                ctx.fillStyle = index === 0 ? "#0f0" : "#090";
+                ctx.fillRect(segment.x, segment.y, box, box);
+                ctx.strokeStyle = "black";
+                ctx.strokeRect(segment.x, segment.y, box, box / 2);
+            });
+
+            let head = { x: snake[0].x, y: snake[0].y };
+            if (direction === "UP") head.y -= box;
+            else if (direction === "DOWN") head.y += box;
+            else if (direction === "LEFT") head.x -= box;
+            else if (direction === "RIGHT") head.x += box;
+
+            if (head.x < 0) head.x = canvas.width - box;
+            else if (head.x >= canvas.width) head.x = 0;
+            if (head.y < 0) head.y = canvas.height - box;
+            else if (head.y >= canvas.height) head.y = 0;
+
+            if (head.x === food.x && head.y === food.y) {
+                food = {
+                    x: Math.floor(Math.random() * 16) * box,
+                    y: Math.floor(Math.random() * 16) * box,
+                };
+                score++;
+                document.getElementById("score").innerText = score;
+                if (score > highScore) {
+                    highScore = score;
+                    localStorage.setItem("highScore", highScore);
+                    document.getElementById("highScore").innerText = highScore;
+                }
+                if (score % 5 === 0) {
+                    speed *= 0.9;
+                    clearInterval(gameLoop);
+                    gameLoop = setInterval(draw, speed);
+                }
+            } else {
+                snake.pop();
+            }
+
+            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                gameOver();
+            }
+
+            snake.unshift(head);
+        }
+
+        function gameOver() {
+            gameOverFlag = true;
+            clearInterval(gameLoop);
+            document.getElementById("gameOverPopup").style.display = 'block';
+        }
+
+        function restartGame() {
+            document.getElementById("gameOverPopup").style.display = 'none';
+            startGame('medium');
+        }
+
+        function goToHome() {
+            document.getElementById("gameOverPopup").style.display = 'none';
+            document.getElementById("menu").style.display = 'flex';
+            document.getElementById("scoreBoard").style.display = 'none';
+            document.getElementById("gameCanvas").style.display = 'none';
+        }
+
+        function toggleTheme() {
+            document.body.classList.toggle("dark-theme");
+        }
+    </script>
+</body>
+</html>
